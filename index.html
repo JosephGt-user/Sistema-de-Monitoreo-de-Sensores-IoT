@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>AgroIoT | Panel de Monitoreo de Cultivos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-container">
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">
+            <i class="fas fa-seedling"></i>
+            <h1>AgroIoT <span class="badge-pro">PLANT MONITOR</span></h1>
+        </div>
+        <div class="header-controls">
+            <div class="user-info" id="userInfo">
+                <i class="fas fa-user-circle"></i>
+                <span id="userName"></span>
+                <span class="user-role" id="userRole"></span>
+            </div>
+            <button class="icon-btn" id="themeToggleBtn"><i class="fas fa-moon"></i> Modo</button>
+            <button class="icon-btn" id="exportBtn"><i class="fas fa-download"></i> CSV</button>
+            <button class="icon-btn" id="irrigationBtn"><i class="fas fa-tint"></i> Riego</button>
+            <button class="icon-btn" id="configBtn"><i class="fas fa-sliders-h"></i> Umbrales</button>
+            <button class="icon-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Salir</button>
+            <div class="status-led"><span style="color:#10b981;">●</span> En línea</div>
+        </div>
+    </div>
+
+    <!-- Estadísticas agrícolas -->
+    <div class="stats-grid">
+        <div class="stats-card">
+            <div class="stats-icon"><i class="fas fa-temperature-high"></i></div>
+            <div class="stats-info">
+                <h4>Temperatura Promedio</h4>
+                <div class="value" id="avgTemp">--°C</div>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon"><i class="fas fa-tint"></i></div>
+            <div class="stats-info">
+                <h4>Humedad del Suelo</h4>
+                <div class="value" id="avgSoil">--%</div>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon"><i class="fas fa-sun"></i></div>
+            <div class="stats-info">
+                <h4>Luz Solar</h4>
+                <div class="value" id="avgLight">-- lux</div>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon"><i class="fas fa-leaf"></i></div>
+            <div class="stats-info">
+                <h4>Salud de Cultivos</h4>
+                <div class="value" id="healthStatus">--%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros y controles -->
+    <div class="filters-bar">
+        <div class="filter-group">
+            <i class="fas fa-filter"></i>
+            <select id="sensorTypeFilter">
+                <option value="all">Todos los sensores</option>
+                <option value="temp">🌡️ Temperatura</option>
+                <option value="soil">💧 Humedad Suelo</option>
+                <option value="light">☀️ Luz Solar</option>
+                <option value="humidity">💨 Humedad Ambiente</option>
+                <option value="ph">🧪 pH Suelo</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <i class="fas fa-clock"></i>
+            <select id="timeRangeFilter">
+                <option value="5">Últimos 5 min</option>
+                <option value="15" selected>Últimos 15 min</option>
+                <option value="30">Últimos 30 min</option>
+                <option value="60">Última hora</option>
+                <option value="0">Todo el histórico</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <i class="fas fa-map-marker-alt"></i>
+            <select id="zoneFilter">
+                <option value="all">Todas las zonas</option>
+                <option value="norte">Zona Norte</option>
+                <option value="sur">Zona Sur</option>
+                <option value="este">Zona Este</option>
+                <option value="oeste">Zona Oeste</option>
+                <option value="invernadero">Invernadero</option>
+            </select>
+        </div>
+        <button class="icon-btn" id="forceRefreshBtn"><i class="fas fa-sync-alt"></i> Forzar lectura</button>
+        <button class="icon-btn" id="clearAlertsBtn"><i class="fas fa-trash-alt"></i> Limpiar alertas</button>
+    </div>
+
+    <!-- Sensores Grid -->
+    <div id="sensorsGrid" class="sensors-grid"></div>
+
+    <!-- Gráfica de tendencias -->
+    <div class="chart-container">
+        <h3><i class="fas fa-chart-line"></i> Evolución de parámetros</h3>
+        <canvas id="trendChart" width="400" height="200"></canvas>
+    </div>
+
+    <!-- Recomendaciones de riego -->
+    <div class="recommendations-panel">
+        <div class="recommendations-header">
+            <h3><i class="fas fa-tasks"></i> Recomendaciones del día</h3>
+            <i class="fas fa-robot" style="color:#8b5cf6;"></i>
+        </div>
+        <div id="recommendationsList" class="recommendations-list">
+            <li>Cargando recomendaciones...</li>
+        </div>
+    </div>
+
+    <!-- Panel de alertas -->
+    <div class="alerts-panel">
+        <div class="alerts-header">
+            <h3><i class="fas fa-bell"></i> Alertas del cultivo</h3>
+            <span id="alertBadge" class="alert-badge">0</span>
+        </div>
+        <div class="alert-tabs">
+            <button class="alert-tab active" data-filter="all">Todas</button>
+            <button class="alert-tab" data-filter="critical">Críticas</button>
+            <button class="alert-tab" data-filter="warning">Advertencias</button>
+        </div>
+        <ul id="alertsList" class="alerts-list">
+            <li>✅ Sin alertas activas</li>
+        </ul>
+    </div>
+</div>
+
+<!-- Modal umbrales -->
+<div id="thresholdModal" class="modal">
+    <div class="modal-content">
+        <h3>⚙️ Configurar umbrales por cultivo</h3>
+        <div id="thresholdsList"></div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button id="saveThresholdsBtn" class="icon-btn">Guardar cambios</button>
+            <button id="closeModalBtn" class="icon-btn">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal riego automático -->
+<div id="irrigationModal" class="modal">
+    <div class="modal-content">
+        <h3><i class="fas fa-tint"></i> Sistema de Riego Inteligente</h3>
+        <div id="irrigationInfo"></div>
+        <div style="margin-top: 20px;">
+            <button id="manualRiegoBtn" class="icon-btn" style="background:#10b981;">Activar riego ahora</button>
+            <button id="closeIrrigationModal" class="icon-btn">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
